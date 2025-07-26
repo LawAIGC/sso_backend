@@ -4,11 +4,12 @@ import threading
 from datetime import timedelta
 
 from flask import Flask
-from jwt.exceptions import ExpiredSignatureError
+from jwt.exceptions import ExpiredSignatureError, DecodeError
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request, create_access_token
 from flask_jwt_extended.exceptions import NoAuthorizationError
 
 import api
+import utils
 import services
 from exts import db, jwt_manager, migrate
 
@@ -28,6 +29,13 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_SECRET_KEY"] = "your-secret-key-here"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=30)
 
+secret_key_filename = ".secret_key"
+if not os.path.exists(secret_key_filename):
+    with open(secret_key_filename, "w", encoding="utf8") as f:
+        f.write(utils.random_secret_key())
+
+with open(secret_key_filename, "r", encoding="utf8") as f:
+    app.config["SECRET_KEY"] = f.read()
 
 db.init_app(app)
 jwt_manager.init_app(app)
@@ -52,7 +60,7 @@ def before_first_request():
 def after_request(resp):
     try:
         verify_jwt_in_request()
-    except (NoAuthorizationError, ExpiredSignatureError):
+    except (NoAuthorizationError, ExpiredSignatureError, DecodeError):
         pass
     else:
         id_ = get_jwt_identity()
@@ -66,6 +74,7 @@ app.post("/api/v1/auth/login")(api.auth_login)  # 登录
 # app.post("/api/v1/auth/refresh")(api.auth_refresh)  # 不需要 refresh_token
 app.post("/api/v1/change_password")(api.api_change_password)
 app.post("/api/v1/forgot_password")(api.api_forgot_password)
+app.get("/api/v1/auth/verify")(api.get_user_info)
 
 app.get("/api/permission/api/menu/list")(api.api_permission_api_menu_list)
 
@@ -90,5 +99,11 @@ app.post("/api/permission/per/create")(api.api_permission_per_create)
 app.post("/api/permission/per/update")(api.api_permission_per_update)
 app.post("/api/permission/per/delete")(api.api_permission_per_delete)
 
+app.post("/api/register_verification")(api.api_send_register_verification)
+app.post("/api/register_user")(api.api_register_user)
+app.post("/api/change_password_verification")(api.api_send_change_password_verification)  # noqa
+app.post("/api/change_password_by_email")(api.api_change_password_by_email_verification)  # noqa
+
+
 if __name__ == "__main__":
-    app.run(port=9001)
+    app.run(port=9001, debug=False)

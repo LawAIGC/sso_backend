@@ -133,3 +133,36 @@ def forgot_password(username):
     db.session.add(user)
     db.session.commit()
     return restful.success({"username": username})
+
+
+def has_email(email):
+    return bool(db.session.query(User).filter_by(email=email).count())
+
+
+def has_username(username):
+    return bool(db.session.query(User).filter_by(name=username).count())
+
+
+def register(username, email, dept):
+    if db.session.query(User).filter_by(name=username).count() > 0:
+        return restful.error("用户名已存在")
+
+    user = User(name=username, email=email, dept=dept, password="")
+    db.session.add(user)
+    db.session.commit()
+    return restful.success(user.to_dict())
+
+
+def has_username_email(username, email):
+    return db.session.query(User).filter_by(name=username, email=email).count()
+
+
+def change_password_by_username_email(username, email, password):
+    user = db.session.query(User).filter_by(name=username, email=email).one_or_none()  # noqa
+    if not user:
+        return restful.error("not found user"), 404
+
+    user.password = password
+    db.session.add(user)
+    db.session.commit()
+    return restful.success({"username": username, "email": email})

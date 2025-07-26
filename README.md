@@ -115,7 +115,24 @@ sso-backend-python/
    - `password: str`
 - `POST /api/v1/forgot_password` - 忘记密码
    - `username: str`
-   
+- `POST /api/register_verification` - 发送注册邮箱验证码
+   - `email: str`
+- `POST /api/register_user` - 注册用户
+   - `username: str`
+   - `email: str`
+   - `dept: str`
+   - `code: str`
+- `POST /api/change_password_verification` - 发送修改密码邮箱验证码
+   - `username: str`
+   - `email: str`
+- `POST /api/change_password_by_email` - 通过邮箱验证码修改密码
+   - `username: str`
+   - `email: str`
+   - `password: str`
+   - `code: str`
+- `GET /api/v1/auth/verify ` - 返回用户信息
+
+
 ### 用户管理
 
 - `GET /api/permission/user/inner/list` - 获取用户列表

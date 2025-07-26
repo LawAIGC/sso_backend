@@ -37,6 +37,7 @@ class User(db.Model):
     id_ = db.Column("id", db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(100), nullable=True)
+    dept = db.Column(db.String(100), nullable=True)
     __password_hash = db.Column("password", db.String(255), nullable=False)
     real_name = db.Column(db.String(100), nullable=True)
     description = db.Column(db.String(255), nullable=True, default=None)
@@ -69,6 +70,7 @@ class User(db.Model):
             "user_id": self.id_,
             "name": self.name,
             "username": self.name,
+            "dept": self.dept,
             "email": self.email,
             "real_name": self.real_name,
             "phone": self.phone,

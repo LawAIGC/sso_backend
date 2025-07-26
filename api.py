@@ -1,6 +1,7 @@
 import json
+from datetime import datetime, timedelta
 
-from flask import Blueprint, request
+from flask import Blueprint, request, session
 from flask_jwt_extended import (
     jwt_required,
     create_access_token,
@@ -8,11 +9,14 @@ from flask_jwt_extended import (
 
 )
 
+import const
+import utils
 import restful
 from services import user as user_service
 from services import menu as menu_service
 from services import role as role_service
 from services import ability as ability_service
+from services import email as email_service
 
 api = Blueprint("api", __name__)
 
@@ -25,6 +29,10 @@ def auth_login():
         return restful.error("请求数据验证失败"), 401
 
     return user_service.login(username, password)
+
+@jwt_required()
+def get_user_info():
+    return user_service.find_by_id(get_jwt_identity())
 
 
 # 不需要 auth_refresh 了
@@ -63,7 +71,7 @@ def api_permission_role_create():
 
 @jwt_required()
 def api_permission_role_delete():
-    role_id = request.args.get("role_id")
+    role_id = request.json.get("role_id")
     return role_service.delete_by_id(role_id)
 
 
@@ -215,7 +223,7 @@ def api_change_password():
     password = request.json.get("password", "")
 
     if not check_password(password):
-        restful.error("invalid password"), 400
+        return restful.error("invalid password"), 400
 
     if user_id and password:
         return user_service.change_password(user_id, password=password)
@@ -230,3 +238,131 @@ def api_forgot_password():
         return restful.error("username required"), 400
 
     return user_service.forgot_password(username)
+
+
+def api_send_register_verification():
+    email = request.json.get("email")
+    if not email:
+        return restful.error("email required"), 400
+
+    if not utils.is_valid_email(email):
+        return restful.error("invalid email"), 400
+
+    if user_service.has_email(email):
+        return restful.error("invalid email"), 400
+
+    code = utils.random_code()
+    session[const.SESSION_KEY_REGISTER_VERIFICATION_CODE] = code
+    session[const.SESSION_KEY_REGISTER_VERIFICATION_EMAIL] = email
+    session[const.SESSION_KEY_REGISTER_VERIFICATION_TIMESTAMP] = (
+        datetime.now() + timedelta(minutes=2)
+    ).timestamp()
+
+    if email_service.send(email, "注册验证码", f"您的验证码是: {code}"):
+        return restful.success("successfully")
+
+    return restful.error("服务器开小差了，请稍后再试")
+
+
+def api_register_user():
+    username = request.json.get("username")
+    if not username:
+        return restful.error("username required")
+    if user_service.has_username(username):
+        return restful.error("invalid username"), 400
+
+    email = request.json.get("email")
+    if not email:
+        return restful.error("email required"), 400
+    if not utils.is_valid_email(email):
+        return restful.error("invalid email"), 400
+
+    dept = request.json.get("dept")
+    if not dept:
+        return restful.error("dept required"), 400
+
+    code = request.json.get("code")
+    if not code:
+        return restful.error("code required"), 400
+
+    try:
+        if (
+            session[const.SESSION_KEY_REGISTER_VERIFICATION_EMAIL] != email or
+            session[const.SESSION_KEY_REGISTER_VERIFICATION_CODE] != code or
+            datetime.now().timestamp() > session[const.SESSION_KEY_REGISTER_VERIFICATION_TIMESTAMP]  # noqa
+        ):
+            raise KeyError
+    except KeyError:
+        return restful.error("无效验证码"), 400
+
+    session.pop(const.SESSION_KEY_REGISTER_VERIFICATION_EMAIL)
+    session.pop(const.SESSION_KEY_REGISTER_VERIFICATION_CODE)
+    session.pop(const.SESSION_KEY_REGISTER_VERIFICATION_TIMESTAMP)
+
+    return user_service.register(username, email, dept)
+
+
+def api_send_change_password_verification():
+    username = request.json.get("username")
+    if not username:
+        return restful.error("username required"), 400
+
+    email = request.json.get("email")
+    if not email:
+        return restful.error("email required"), 400
+    if not utils.is_valid_email(email):
+        return restful.error("invalid email"), 400
+
+    if not user_service.has_username_email(username, email):
+        return restful.error("invalid username or email"), 400
+
+    code = utils.random_code()
+    session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_NAME] = username
+    session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_CODE] = code
+    session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_EMAIL] = email
+    session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_TIMESTAMP] = (
+        datetime.now() + timedelta(minutes=2)
+    ).timestamp()
+
+    if email_service.send(email, "修改密码验证码", f"您的验证码是: {code}"):
+        return restful.success("successfully")
+
+    return restful.error("服务器开小差了，请稍后再试")
+
+
+def api_change_password_by_email_verification():
+    username = request.json.get("username")
+    if not username:
+        return restful.error("username required"), 400
+
+    email = request.json.get("email")
+    if not email:
+        return restful.error("email required"), 400
+
+    password = request.json.get("password")
+    if not password:
+        return restful.error("passowrd required"), 400
+    if not check_password(password):
+        return restful.error("invalid password"), 400
+
+    code = request.json.get("code")
+    if not code:
+        return restful.error("code required"), 400
+
+    try:
+        if (
+            session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_NAME] != username or  # noqa
+            session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_EMAIL] != email or  # noqa
+            session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_CODE] != code or  # noqa
+            datetime.now().timestamp() > session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_TIMESTAMP]  # noqa
+        ):
+            raise KeyError
+    except KeyError:
+        return restful.error("无效验证码"), 400
+
+    session.pop(const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_NAME)
+    session.pop(const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_EMAIL)
+    session.pop(const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_CODE)
+    session.pop(const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_TIMESTAMP)
+
+    return user_service.change_password_by_username_email(username, email, password)
