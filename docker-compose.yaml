@@ -10,8 +10,10 @@ services:
     environment:
       - FLASK_DEBUG=0
     ports:
-      - 9001:9001
+      - "9001:9001"
     deploy:
       resources:
         limits:
           memory: 512M
+    env_file:
+      - .env

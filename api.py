@@ -255,10 +255,10 @@ def api_send_register_verification():
     session[const.SESSION_KEY_REGISTER_VERIFICATION_CODE] = code
     session[const.SESSION_KEY_REGISTER_VERIFICATION_EMAIL] = email
     session[const.SESSION_KEY_REGISTER_VERIFICATION_TIMESTAMP] = (
-        datetime.now() + timedelta(minutes=2)
+        datetime.now() + timedelta(minutes=5)
     ).timestamp()
 
-    if email_service.send(email, "注册验证码", f"您的验证码是: {code}"):
+    if email_service.send(email, "【wenhuatech】注册验证码", f"你的注册验证码是：{code}，5分钟内有效。"):
         return restful.success("successfully")
 
     return restful.error("服务器开小差了，请稍后再试")
@@ -321,7 +321,7 @@ def api_send_change_password_verification():
     session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_CODE] = code
     session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_EMAIL] = email
     session[const.SESSION_KEY_CHANGE_PASSWORD_VERIFICATION_TIMESTAMP] = (
-        datetime.now() + timedelta(minutes=2)
+        datetime.now() + timedelta(minutes=3)
     ).timestamp()
 
     if email_service.send(email, "修改密码验证码", f"您的验证码是: {code}"):
@@ -341,7 +341,7 @@ def api_change_password_by_email_verification():
 
     password = request.json.get("password")
     if not password:
-        return restful.error("passowrd required"), 400
+        return restful.error("password required"), 400
     if not check_password(password):
         return restful.error("invalid password"), 400
 
