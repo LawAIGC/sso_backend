@@ -285,6 +285,10 @@ def api_register_user():
     if not code:
         return restful.error("code required"), 400
 
+    password = request.json.get("password")
+    if not password:
+        return restful.error("password required"), 400
+
     try:
         if (
             session[const.SESSION_KEY_REGISTER_VERIFICATION_EMAIL] != email or
@@ -299,7 +303,7 @@ def api_register_user():
     session.pop(const.SESSION_KEY_REGISTER_VERIFICATION_CODE)
     session.pop(const.SESSION_KEY_REGISTER_VERIFICATION_TIMESTAMP)
 
-    return user_service.register(username, email, dept)
+    return user_service.register(username, email, dept, password)
 
 
 def api_send_change_password_verification():

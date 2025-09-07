@@ -143,11 +143,11 @@ def has_username(username):
     return bool(db.session.query(User).filter_by(name=username).count())
 
 
-def register(username, email, dept):
+def register(username, email, dept, password):
     if db.session.query(User).filter_by(name=username).count() > 0:
         return restful.error("用户名已存在")
 
-    user = User(name=username, email=email, dept=dept, password="")
+    user = User(name=username, email=email, dept=dept, password=password)
     db.session.add(user)
     db.session.commit()
     return restful.success(user.to_dict())
