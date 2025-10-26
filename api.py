@@ -113,6 +113,7 @@ def api_permission_user_create():
     real_name = request.json.get("real_name")
     role_type = request.json.get("role_type")  # noqa
     role_infos = request.json.get("roleinfos")
+    dept = request.json.get("dept")
 
     if not username:
         return restful.error("username required")
@@ -134,7 +135,8 @@ def api_permission_user_create():
         email=email,
         real_name=real_name,
         description=description,
-        role_ids=role_ids
+        role_ids=role_ids,
+        dept=dept,
     )
 
 
@@ -159,6 +161,7 @@ def api_permission_user_update():
     description = request.json.get("description")
     role_type = request.json.get("role_type")  # noqa
     role_infos = request.json.get("roleinfos")
+    dept = request.json.get("dept")
 
     role_ids = []
     if role_infos:
@@ -173,6 +176,7 @@ def api_permission_user_update():
         real_name=real_name,
         description=description,
         role_ids=role_ids,
+        dept=dept,
     )
 
 

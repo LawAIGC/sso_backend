@@ -47,7 +47,7 @@ def login(username, password):
     }, 200, {"Authorization": f"Bearer {token}"}
 
 
-def create(username, password, email, real_name, description, role_ids):
+def create(username, password, email, real_name, description, role_ids, dept):
     if db.session.query(User).filter_by(name=username).count() > 0:
         return restful.error("用户名已存在")
 
@@ -59,6 +59,7 @@ def create(username, password, email, real_name, description, role_ids):
         real_name=real_name,
         description=description,
         roles=roles,
+        dept=dept,
     )
     db.session.add(user)
     db.session.commit()
@@ -98,7 +99,7 @@ def delete_by_id(id_):
     return restful.success({"id": id_})
 
 
-def update(id_, username, email, real_name, description, role_ids):
+def update(id_, username, email, real_name, description, role_ids, dept):
     user = db.session.query(User).filter_by(id_=id_).one_or_none()
     if not user:
         return restful.error("用户不存在")
@@ -108,6 +109,7 @@ def update(id_, username, email, real_name, description, role_ids):
     user.real_name = real_name
     user.description = description
     user.roles = db.session.query(Role).filter(Role.id_.in_(role_ids)).all()
+    user.dept = dept
     db.session.commit()
     return restful.success({"id": id_})
 
